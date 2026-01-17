@@ -4,11 +4,17 @@
   <% 25.times do |i| %>
     <% blocked = [6, 7, 8, 16, 17, 18].include?(i) %>
 
-    <div
-      class="w-12 h-12 border flex items-center justify-center text-lg font-bold <%= blocked ? 'bg-black' : 'bg-white' %>"
-    >
+    <div class="w-12 h-12 border flex items-center justify-center text-lg font-bold <%= blocked ? 'bg-black' : 'bg-white' %>">
       <% unless blocked %>
-        _
+      <input
+        type="text"
+        inputmode="text"
+        maxlength="1"
+        class="w-full h-full text-center text-lg font-bold uppercase outline-none bg-transparent"
+        data-controller="cell"
+        data-action="input->cell#input"
+        aria-label="Cell <% i %>"
+        />   
       <% end %>
     </div>
   <% end %>
