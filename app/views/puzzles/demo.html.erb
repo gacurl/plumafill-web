@@ -1,3 +1,15 @@
-<%# app/views/puzzles/demo.html.erb %>
-<h1>PlumaFill — Demo</h1>
-<p>Milestone 1: proof-of-fun prototype</p>
+<h1 class="text-2xl font-semibold mb-4">PlumaFill — Demo</h1>
+
+<div class="grid grid-cols-5 gap-1 w-fit">
+  <% 25.times do |i| %>
+    <% blocked = [6, 7, 8, 16, 17, 18].include?(i) %>
+
+    <div
+      class="w-12 h-12 border flex items-center justify-center text-lg font-bold <%= blocked ? 'bg-black' : 'bg-white' %>"
+    >
+      <% unless blocked %>
+        _
+      <% end %>
+    </div>
+  <% end %>
+</div>
