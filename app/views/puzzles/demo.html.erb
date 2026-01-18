@@ -1,25 +1,45 @@
+<%# app/views/puzzles/demo.html.erb %>
+<!-- Tailwind safelist for JS-added classes (demo-only) -->
+<div class="hidden border-green-500 border-red-500 border-transparent border-2"></div>
+
 <h1 class="text-2xl font-semibold mb-4">PlumaFill — Demo</h1>
 
-<div class="grid grid-cols-5 gap-1 w-fit">
-  <% 25.times do |index| %>
-    <% idx = index.to_i %>
-    <% blocked = [6, 7, 8, 16, 17, 18].include?(idx) %>
-    <% row = idx / 5 %>
-    <% col = idx % 5 %>
+<div data-controller="cell">
+  <div class="grid grid-cols-5 gap-1 w-fit">
+    <% 25.times do |index| %>
+      <% idx = index.to_i %>
+      <% blocked = [6, 7, 8, 16, 17, 18].include?(idx) %>
+      <% row = idx / 5 %>
+      <% col = idx % 5 %>
 
-    <div class="w-12 h-12 border flex items-center justify-center text-lg font-bold <%= blocked ? 'bg-black' : 'bg-white' %>">
-      <% unless blocked %>
-      <input
-        type="text"
-        maxlength="1"
-        class="w-full h-full text-center text-lg font-bold uppercase outline-none bg-transparent"
-        data-controller="cell"
-        data-action="input->cell#input keydown->cell#keydown"
-        data-row="<%= row %>"
-        data-col="<%= col %>"
-        aria-label="Cell <% idx %>"
-        />   
-      <% end %>
-    </div>
-  <% end %>
+      <div class="w-12 h-12 border flex items-center justify-center text-lg font-bold <%= blocked ? 'bg-black' : 'bg-white' %>">
+        <% unless blocked %>
+        <input
+          type="text"
+          maxlength="1"
+          class="w-full h-full text-center text-lg font-bold uppercase outline-none bg-transparent border-2 border-transparent"
+          data-controller="cell"
+          data-action="input->cell#input keydown->cell#keydown"
+          data-row="<%= row %>"
+          data-col="<%= col %>"
+          aria-label="Cell <% idx %>"
+          />   
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="mt-4 flex items-center gap-3">
+    <button
+      type="button"
+      class="rounded bg-slate-800 px-4 py-2 text-white hover:bg-slate-700"
+      data-action="click->cell#check"
+    >
+      Check
+    </button>
+
+    <p class="text-sm text-slate-700" data-cell-target="feedback"></p>
+  </div>
 </div>
+                
+

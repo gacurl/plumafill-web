@@ -1,6 +1,70 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
+  static targets = ["cell", "feedback"]
+
+  answerKey() {
+  // Demo-only: 5x5 grid indices 0..24. Use "#" to represent blocked squares.
+    return [
+      "H", "E", "L", "L", "O",
+      "#", "#", "A", "#", "#",
+      "W", "O", "R", "L", "D",
+      "#", "#", "I", "#", "#",
+      "R", "A", "I", "L", "S",
+    ]
+  }
+
+  cells() {
+  // Prefer scoping to this controller’s element (safer than document-wide)
+    return Array.from(this.element.querySelectorAll('input[data-row][data-col]'))
+  }
+
+  check() {
+    const key = this.answerKey()
+    const inputs = this.cells()
+
+    let wrong = 0
+    let checked = 0
+
+    inputs.forEach((input) => {
+      const r = parseInt(input.dataset.row, 10)
+      const c = parseInt(input.dataset.col, 10)
+      const idx = r * 5 + c
+
+      const expected = key[idx]
+      if (!expected || expected === "#") return
+
+      checked += 1
+
+      const actual = (input.value || "").toUpperCase()
+
+      // Clear prior state (IMPORTANT: remove border-transparent too)
+      input.classList.remove("border-green-500", "border-red-500", "border-transparent")
+
+      // Skip unfilled cells — no hints yet
+      if (!actual) {
+        input.classList.add("border-transparent")
+        return
+      }
+
+      if (actual && actual === expected) {
+        input.classList.add("border-green-500")
+      } else {
+        input.classList.add("border-red-500")
+        wrong += 1
+      }
+    })
+
+    if (this.hasFeedbackTarget) {
+      if (checked === 0) {
+        this.feedbackTarget.textContent = "Fill some letters, then check."
+      } else if (wrong === 0) {
+        this.feedbackTarget.textContent = "✅ Looks good so far!"
+      } else {
+        this.feedbackTarget.textContent = `❌ ${wrong} incorrect.`
+      }
+    }
+  }
 
   input(event) {
     let value = event.target.value
