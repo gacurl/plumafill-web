@@ -66,6 +66,26 @@ export default class extends Controller {
     }
   }
 
+  clear() {
+    const inputs = this.cells()
+
+    inputs.forEach((input) => {
+      input.value = ""
+      input.classList.remove("border-green-500", "border-red-500", "border-transparent")
+      input.classList.add("border-transparent")
+    })
+
+    if (this.hasFeedbackTarget) {
+      this.feedbackTarget.textContent = ""
+    }
+
+    // Put the cursor back at the first playable cell
+    if (inputs.length > 0) {
+      inputs[0].focus()
+      inputs[0].select()
+    }
+  }
+
   input(event) {
     let value = event.target.value
 
