@@ -1,180 +1,137 @@
+// app/javascript/controllers/cell_controller.js
+// Why this flows well in an interview
+// -Lifecycle first: how the controller wires itself
+// -Behavior next: what happens when the user interacts
+// -Helpers later: implementation details
+// -Reads like a story instead of a toolbox dump
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["cell", "feedback"]
+  static targets = ["input", "feedback"]
 
-  answerKey() {
-  // Demo-only: 5x5 grid indices 0..24. Use "#" to represent blocked squares.
-    return [
-      "H", "E", "L", "L", "O",
-      "#", "#", "A", "#", "#",
-      "W", "O", "R", "L", "D",
-      "#", "#", "I", "#", "#",
-      "R", "A", "I", "L", "S",
-    ]
+  // lifecycle
+  connect () {
+    this.inputsList = this.inputTargets
+
+    this.onPaste = (event) => this.handlePaste(event)
+    this.inputs().forEach((input) => input.addEventListener("paste", this.onPaste))
   }
 
-  cells() {
-  // Prefer scoping to this controller’s element (safer than document-wide)
-    return Array.from(this.element.querySelectorAll('input[data-row][data-col]'))
+  disconnect() {
+    if (!this.onPaste) return
+    this.inputs().forEach((input) => input.removeEventListener("paste" , this.onPaste))
   }
 
-  check() {
-    const key = this.answerKey()
-    const inputs = this.cells()
-
-    let wrong = 0
-    let checked = 0
-
-    inputs.forEach((input) => {
-      const r = parseInt(input.dataset.row, 10)
-      const c = parseInt(input.dataset.col, 10)
-      const idx = r * 5 + c
-
-      const expected = key[idx]
-      if (!expected || expected === "#") return
-
-      checked += 1
-
-      const actual = (input.value || "").toUpperCase()
-
-      // Clear prior state (IMPORTANT: remove border-transparent too)
-      input.classList.remove("border-green-500", "border-red-500", "border-transparent")
-
-      // Skip unfilled cells — no hints yet
-      if (!actual) {
-        input.classList.add("border-transparent")
-        return
-      }
-
-      if (actual && actual === expected) {
-        input.classList.add("border-green-500")
-      } else {
-        input.classList.add("border-red-500")
-        wrong += 1
-      }
-    })
-
-    if (this.hasFeedbackTarget) {
-      if (checked === 0) {
-        this.feedbackTarget.textContent = "Fill some letters, then check."
-      } else if (wrong === 0) {
-        this.feedbackTarget.textContent = "✅ Looks good so far!"
-      } else {
-        this.feedbackTarget.textContent = `❌ ${wrong} incorrect.`
-      }
-    }
-  }
-
-  clear() {
-    const inputs = this.cells()
-
-    inputs.forEach((input) => {
-      input.value = ""
-      input.classList.remove("border-green-500", "border-red-500", "border-transparent")
-      input.classList.add("border-transparent")
-    })
-
-    if (this.hasFeedbackTarget) {
-      this.feedbackTarget.textContent = ""
-    }
-
-    // Put the cursor back at the first playable cell
-    if (inputs.length > 0) {
-      inputs[0].focus()
-      inputs[0].select()
-    }
-  }
-
+  // Event handlers (user interaction)
+  //typing behavior
   input(event) {
-    let value = event.target.value
-
-    // Allow letters only
-    value = value.replace(/[^a-zA-Z]/g, "")
-
-    // Uppercase
-    event.target.value = value.toUpperCase()
-
-    // Auto-advance if a letter was entered
-    if (value.length === 1) {
-      const inputs = Array.from(document.querySelectorAll('input[data-controller="cell"]'))
-      const index = inputs.indexOf(event.target)
-
-      if (index > -1 && index < inputs.length - 1) {
-        inputs[index + 1].focus()
-      }
-    }
-  }
-
-  keydown(event) {
-    console.log("KEYDOWN", event.key, event.target.dataset.row, event.target.dataset.col)
-    const key = event.key
-
-    // Backspace behavior
-    if (key === "Backspace") {
-      event.preventDefault()
-
-      // If this cell has a value, clear it and stay
-      if (event.target.value) {
-        event.target.value = ""
-        return
-      }
-
-      // If empty, move left to previous playable cell and clear it
-      const size = 5
-      let r = parseInt(event.target.dataset.row, 10)
-      let c = parseInt(event.target.dataset.col, 10)
-
-      // Walk backward through the grid, wrapping to the previous row
-      while (true) {
-        c -= 1
-        if (c < 0) {
-          r -= 1
-          c = size -1
-        }
-
-        if (r < 0) break
-
-        const prev = document.querySelector(`input[data-row="${r}"][data-col="${c}"]`)
-        if (prev) {
-          prev.focus()
-          prev.select()
-          prev.value = ""
-          break
-        }
-      }
-
+    if (this.justHandledPaste) {
+      this.justHandledPaste = false
       return
     }
 
-    const directions = {
-      ArrowUp: [-1, 0],
-      ArrowDown: [1, 0],
-      ArrowLeft: [0, -1],
-      ArrowRight: [0, 1],
+    const currentInput = event.target
+    //normalize to a single Uppercase char
+    const rawValue = (currentInput.value || "")
+    // pull the last alpha char typed or pasted
+    const letters = rawValue.match(/[a-z]/gi)
+
+    if (!letters || letters.length === 0) {
+      currentInput.value = ""
+      return
     }
 
-    if (!directions[key]) return
+    //multiple chars? keep the last char
+    const lastChar = letters[letters.length - 1].toUpperCase()
+
+    //only accept A-Z
+    if (!/^[A-Z]$/.test(lastChar)) {
+      currentInput.value = ""
+      return
+    }
+
+    currentInput.value = lastChar
+
+    //auto-advance to next playable cell
+    const currentIndex = this.indexOf(currentInput)
+    const nextInput = this.inputAtIndex(currentIndex + 1)
+    this.focus(nextInput)
+  }
+
+  // enter doesn't submit the form
+  keydown(event) {
+    if (event.key === "Enter") {
+      event.preventDefault()
+    }
+  }
+
+  handlePaste(event) {
     event.preventDefault()
+    this.justHandledPaste = true
 
-    const [dr, dc] = directions[key]
-    const size = 5
+    const currentInput = event.target
+    const pastedText = event.clipboardData?.getData("text") || ""
 
-    let r = parseInt(event.target.dataset.row, 10)
-    let c = parseInt(event.target.dataset.col, 10)
-
-    while (true) {
-      r += dr
-      c += dc
-
-      if (r < 0 || r >= size || c < 0 || c >= size) break
-
-      const next = document.querySelector(`input[data-row="${r}"][data-col="${c}"]`)
-      if (next) {
-        next.focus()
-        next.select()
-        break
-      }
+    const letters = pastedText.match(/[a-z]/gi)
+    if (!letters || letters.length === 0) {
+      currentInput.value = ""
+      return
     }
+
+    const lastChar = letters[letters.length - 1].toUpperCase()
+    currentInput.value = lastChar
+
+    const currentIndex = this.indexOf(currentInput)
+    const nextInput = this.inputAtIndex(currentIndex + 1)
+    this.focus(nextInput)
+  }
+
+  // Nav helpers
+  indexOf(input) {
+    return this.inputs().indexOf(input)
+  }
+
+  inputAtIndex(index) {
+    const list = this.inputs()
+    if (index < 0 || index >= list.length) return null
+    return list[index]
+  }
+
+  // Helpers to find an input at row/col (skips blocked automatically)
+  inputAt(row, col) {
+    const rowNum = Number(row)
+    const colNum = Number(col)
+
+    return this.inputs().find((input) => {
+      return Number(input.dataset.row) === rowNum && Number(input.dataset.col) === colNum
+    })
+  }
+
+  // Grid helpers
+  inputs() {
+    return this.inputsList
+  }
+
+  // Grid metrics (dervied. Not hard coded)
+  maxRow() {
+    const rows = this.inputs().map((input) => Number(input.dataset.row))
+    return rows.length ? Math.max(...rows) : 0
+  }
+
+  maxCol() {
+    const cols = this.inputs().map((input) => Number(input.dataset.col))
+    return cols.length ? Math.max(...cols) : 0
+  }
+
+  // UX helpers
+  focus(input) {
+    if (!input) return
+    input.focus()
+    input.select?.()
+  }
+
+  setFeedback(text) {
+    if(!this.hasFeedbackTarget) return
+    this.feedbackTarget.textContent = text
   }
 }
